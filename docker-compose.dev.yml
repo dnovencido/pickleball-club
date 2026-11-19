@@ -5,14 +5,12 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-    ports:
-      - "3000:3000"
     expose:
       - "3000"
     volumes:
       - ./:/app
       - pball_node_modules_v2:/app/node_modules
-    command: sh -c "npm install && node --watch server.js"
+    command: sh -c "npm ci && node --watch server.js"
 
 volumes:
-  pball_node_modules:
+  pball_node_modules_v2:
