@@ -34,6 +34,7 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
 .mode-page-open .intro,.mode-page-open .how,.mode-page-open footer{display:none}
 .mode-page-open .workspace{display:block;max-width:720px;padding-top:44px}
 .mode-page-open .side-column{width:100%}
+.network-indicator{color:#d4fa62;white-space:nowrap}.network-indicator[data-quality="fair"]{color:#f8d77d}.network-indicator[data-quality="poor"]{color:#ff886b}@media(max-width:700px){.court-topline{gap:5px}.network-indicator{font-size:6px;letter-spacing:.3px}}
 
 /* Private lobby chat */
 .lobby-chat{border-top:1px solid #394b3e;margin-top:20px;padding-top:18px}
