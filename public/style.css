@@ -7,3 +7,13 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
 .lobby-panel{width:min(480px,100%);max-height:90vh;overflow:auto;background:#1a251d;border:1px solid #506657;border-radius:9px;padding:28px}.lobby-heading{display:flex;justify-content:space-between;align-items:flex-start}.lobby-heading h2{font:700 28px 'Space Grotesk';letter-spacing:-1px;margin:8px 0}.lobby-heading h2 span{color:var(--lime)}.lobby-close{background:none;border:0;color:#dce8dc;font-size:30px;line-height:1}.lobby-intro{color:#a4b5a5;font-size:13px;line-height:1.5}.lobby-code{display:flex;align-items:center;justify-content:space-between;background:#26382a;border:1px solid #49634c;border-radius:5px;padding:15px 18px;margin:20px 0}.lobby-code span{color:#adbfab;font-size:10px;letter-spacing:1.5px;font-weight:700}.lobby-code strong{font:700 27px 'Space Grotesk';letter-spacing:5px;color:var(--lime)}.lobby-players{display:grid;gap:8px}.lobby-player{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#223027;border:1px solid #394b3e;border-radius:5px;padding:16px;font-size:13px}.lobby-player span{color:#94a695;font-size:9px;letter-spacing:1px;font-weight:700;white-space:nowrap}.lobby-player span.ready{color:var(--lime)}.lobby-status{font-size:11px;color:#b2c2b1;min-height:18px;margin:16px 0}.lobby-ready{width:100%}.lobby-leave{display:block;margin:14px auto 0;background:none;border:0;color:#aabaaa;font-size:12px;padding:8px}
 .lobby-page{background:#101713}.lobby-start{width:100%;margin-top:10px;padding:15px;border:1px solid var(--lime);border-radius:4px;background:#344d31;color:var(--lime);font-weight:700}.lobby-start:disabled{opacity:.45;cursor:not-allowed}
 .match-results .rematch-status{min-height:1.4em;margin:16px 0 0;color:#d4e4ca;font-size:12px}
+
+/* Font Awesome icon treatment */
+.status .fa-circle,.live-label .fa-circle{display:inline-block;width:auto;height:auto;margin:0 7px 0 0;background:transparent;font-size:6px;vertical-align:1px}
+.eyebrow-dot{width:auto;height:auto;margin-right:8px;background:transparent;font-size:7px;vertical-align:1px}
+.brand-icon{display:inline-grid;place-items:center}
+.locker-button>i:first-child{color:var(--lime);font-size:16px}.locker-button>i:last-child{font-size:11px}
+.intro-mark strong i{color:var(--lime);font-size:12px;margin-left:3px;vertical-align:2px}
+.overlay-ball i{font-size:25px}.below-court>span:first-child>i{color:var(--lime);font-size:13px;margin-right:4px}
+.mode-icon{display:block}.settings-title>i{color:var(--lime)}.tip>i{color:var(--lime);font-size:18px;padding-top:1px}
+.close i{font-size:.85em}.touch-player button i{pointer-events:none}
