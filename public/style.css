@@ -17,3 +17,46 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
 .overlay-ball i{font-size:25px}.below-court>span:first-child>i{color:var(--lime);font-size:13px;margin-right:4px}
 .mode-icon{display:block}.settings-title>i{color:var(--lime)}.tip>i{color:var(--lime);font-size:18px;padding-top:1px}
 .close i{font-size:.85em}.touch-player button i{pointer-events:none}
+
+/* Mode cards act as the landing menu; each selection opens its own setup page. */
+.side-column:not(.mode-page-active)>.settings,.side-column:not(.mode-page-active)>.tip{display:none}
+.side-column.mode-page-active>.mode-list{display:none}
+.side-column.mode-page-active>.section-heading{display:none}
+.mode-page-header{padding:0 0 18px}
+.mode-page-header .back-to-modes{display:flex;width:max-content}
+.mode-page-header .section-number{display:block}
+.mode-page-header h2{font:700 30px/1.05 'Space Grotesk';letter-spacing:-1.2px;margin:18px 0 8px}
+.mode-page-header h2 span{color:var(--lime)}
+.mode-page-header p{max-width:520px;color:#9bac9d;font-size:13px;line-height:1.5;margin:0 0 6px}
+.back-to-modes{display:inline-flex;align-items:center;gap:8px;background:transparent;border:0;color:var(--lime);font-size:11px;font-weight:700;padding:0;margin:0 0 28px}
+.back-to-modes:hover{text-decoration:underline}
+.mode-page-active .settings{margin-top:6px}
+.mode-page-open .intro,.mode-page-open .how,.mode-page-open footer{display:none}
+.mode-page-open .workspace{display:block;max-width:720px;padding-top:44px}
+.mode-page-open .side-column{width:100%}
+
+/* Private lobby chat */
+.lobby-chat{border-top:1px solid #394b3e;margin-top:20px;padding-top:18px}
+.lobby-chat-head{display:flex;justify-content:space-between;gap:12px;color:#b7c8b7;font-size:9px;font-weight:700;letter-spacing:1.25px}
+.lobby-chat-head span:last-child{color:#7f9483;font-size:8px;letter-spacing:.7px}
+.lobby-messages{display:flex;flex-direction:column;gap:8px;min-height:96px;max-height:152px;overflow:auto;margin:11px 0;padding:2px 3px 2px 0}
+.lobby-chat-empty{align-self:center;color:#819184;font-size:11px;margin:auto 0;text-align:center}
+.lobby-message{max-width:84%;background:#243128;border:1px solid #3b4c3f;border-radius:7px 7px 7px 2px;padding:8px 10px}
+.lobby-message.mine{align-self:flex-end;background:#344a36;border-color:#68836b;border-radius:7px 7px 2px 7px}
+.lobby-message b{display:block;color:var(--lime);font-size:9px;letter-spacing:.7px;margin-bottom:3px}
+.lobby-message p{color:#edf4e9;font-size:12px;line-height:1.35;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+.lobby-chat-form{display:flex;gap:8px}.lobby-chat-form input{flex:1;min-width:0;margin:0;padding:10px 11px}.lobby-chat-form button{width:42px;border:0;border-radius:4px;background:var(--lime);color:#172016;font-size:14px}.lobby-chat-form button:disabled{background:#344638;color:#78917c;cursor:not-allowed}
+
+.mobile-control-picker{display:none}.touch-player .dpad{display:none}.touch-controls.use-dpad .dpad{display:flex}.touch-controls.use-dpad .joystick{display:none}
+@media (pointer:coarse){
+ .game-active .mobile-control-picker{display:flex;align-items:center;justify-content:space-between;color:#aab9ab;font-size:11px;margin:12px 0}
+ .touch-controls:not(.hidden){display:grid;gap:16px}
+ .touch-player{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:8px;padding:10px;background:#19281e;border:1px solid #405747;border-radius:8px}
+ .touch-player>span{align-self:flex-start;font-weight:700}
+ .joystick{flex:none;width:108px;height:108px;border-radius:50%;border:2px solid #69846b;background:#304438;display:grid;place-items:center;touch-action:none;user-select:none}
+ .joystick-knob{width:46px;height:46px;border-radius:50%;background:#a5bd9b;border:2px solid #d8e6cf;pointer-events:none}
+ .shot-buttons{display:grid;grid-template-columns:repeat(2,minmax(48px,1fr));gap:6px;align-items:center}
+ .touch-player .shot-buttons button,.touch-player .dpad button{min-width:48px;height:48px;font-size:10px;font-weight:700;touch-action:none}
+ .touch-player .shot-buttons .touch-hit{height:56px;font-size:14px}
+ .touch-player .dpad{flex-wrap:wrap;width:102px;gap:4px}
+}
