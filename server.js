@@ -1,0 +1,34 @@
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const { performance } = require('node:perf_hooks');
+const engine = require('./public/engine');
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+app.use(express.static('public'));
+const rooms = new Map();
+let queue = null;
+function code() { let c; do { c = Array.from({length:4}, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join(''); } while(rooms.has(c)); return c; }
+function cleanProfile(p={}) { return {name:String(p.name||'PLAYER').slice(0,18),badge:/^player-(0[1-9]|1[0-2])$/.test(p.badge)?p.badge:'player-01',color:/^#[0-9a-f]{6}$/i.test(p.color)?p.color:'#d4fa62',skin:['Classic Wood','Carbon Fiber','Neon Cyber','Retro Pixel','Gold Pro'].includes(p.skin)?p.skin:'Classic Wood'}; }
+function lobbyUpdate(code,room){room.ids.forEach((id,index)=>io.to(id).emit('lobbyUpdate',{code,index,isHost:id===room.hostId,players:room.profiles.map((profile,i)=>({profile,ready:!!room.ready[i],isHost:room.ids[i]===room.hostId})),settings:room.settings}));}
+function startMatch(code,room){room.rematchReady=room.ids.map(()=>false);room.game=engine.create({players:room.profiles,winningScore:room.settings.winningScore,powerUps:room.settings.powerUps});room.inputs=[{},{}];room.pendingSwing=[false,false];io.to(code).emit('matchStart',{code,state:room.game,private:room.private});}
+function leave(socket) { if(queue===socket.id)queue=null; const roomCode=socket.data.room,room=rooms.get(roomCode); if(!room)return; const index=room.ids.indexOf(socket.id); if(index>=0){room.ids.splice(index,1);room.profiles.splice(index,1);room.ready.splice(index,1);} socket.leave(roomCode);socket.data.room=null;if(room.ids.length){const wasPlaying=!!room.game;room.game=null;room.ready=room.ids.map(()=>false);if(room.hostId===socket.id)room.hostId=room.ids[0];if(wasPlaying)io.to(room.ids[0]).emit('opponentLeft');if(room.private)lobbyUpdate(roomCode,room);} else rooms.delete(roomCode); }
+function join(socket, roomCode, profile) { const room=rooms.get(roomCode); if(!room || room.ids.length>=2||socket.data.room===roomCode){socket.emit('roomError','Room not found or already full.');return false} leave(socket); room.ids.push(socket.id); room.profiles.push(cleanProfile(profile));room.ready.push(false); socket.data.room=roomCode; socket.join(roomCode); socket.emit('joined',{code:roomCode,index:room.ids.length-1});if(room.private)lobbyUpdate(roomCode,room);else if(room.ids.length===2)startMatch(roomCode,room);return true; }
+io.on('connection', socket=>{
+ socket.on('createRoom',({profile,settings}={})=>{leave(socket);let c=code();rooms.set(c,{ids:[],profiles:[],ready:[],private:true,hostId:socket.id,settings:{winningScore:settings?.winningScore===11?11:7,powerUps:!!settings?.powerUps}});join(socket,c,profile)});
+ socket.on('joinRoom',({code,profile}={})=>join(socket,String(code||'').toUpperCase().slice(0,4),profile));
+ socket.on('quickMatch',({profile,settings}={})=>{leave(socket); if(queue&&queue!==socket.id&&io.sockets.sockets.has(queue)){let first=io.sockets.sockets.get(queue);queue=null;join(socket,first.data.room,profile)}else{let c=code();rooms.set(c,{ids:[],profiles:[],ready:[],private:false,settings:{winningScore:settings?.winningScore===11?11:7,powerUps:!!settings?.powerUps}});join(socket,c,profile);queue=socket.id;socket.emit('searching')}});
+ socket.on('setReady',ready=>{const room=rooms.get(socket.data.room);if(!room?.private||room.game||typeof ready!=='boolean')return;const i=room.ids.indexOf(socket.id);if(i<0)return;room.ready[i]=ready;lobbyUpdate(socket.data.room,room)});
+ socket.on('startRoom',()=>{const room=rooms.get(socket.data.room);if(!room?.private||room.game||room.hostId!==socket.id||room.ids.length!==2||!room.ready.every(Boolean))return;startMatch(socket.data.room,room)});
+ socket.on('returnToLobby',()=>{const room=rooms.get(socket.data.room);if(!room?.game?.finished||!room.ids.includes(socket.id))return;room.game=null;room.private=true;room.hostId=room.hostId||room.ids[0];room.ready=room.ids.map(()=>false);room.rematchReady=room.ids.map(()=>false);io.to(socket.data.room).emit('returnedToLobby');lobbyUpdate(socket.data.room,room)});
+ socket.on('rematchReady',ready=>{const room=rooms.get(socket.data.room);if(!room?.game?.finished||room.ids.length!==2||typeof ready!=='boolean')return;const index=room.ids.indexOf(socket.id);if(index<0)return;room.rematchReady[index]=ready;room.ids.forEach((id,i)=>io.to(id).emit('rematchUpdate',{you:room.rematchReady[i],opponent:room.rematchReady[1-i]}));if(room.rematchReady.every(Boolean))startMatch(socket.data.room,room)});
+ socket.on('input',input=>{let room=rooms.get(socket.data.room);if(!room?.game)return;let i=room.ids.indexOf(socket.id);if(i>=0){if(input?.swing&&!room.inputs[i].swing)room.pendingSwing[i]=true;room.inputs[i]={up:!!input?.up,down:!!input?.down,left:!!input?.left,right:!!input?.right,swing:!!input?.swing,slow:!!input?.slow,sprint:!!input?.sprint,moveBoost:Math.max(0,Math.min(1,Number(input?.moveBoost)||0))};}});
+ socket.on('leaveRoom',()=>leave(socket));socket.on('disconnect',()=>leave(socket));
+});
+// Accumulate elapsed time so timer jitter does not change the simulation speed.
+const tickDuration=1000/60;let previousTick=performance.now(),tickAccumulator=0;
+setInterval(()=>{const now=performance.now();tickAccumulator+=Math.min(now-previousTick,100);previousTick=now;let steps=0;while(tickAccumulator>=tickDuration&&steps<5){for(const [c,r] of rooms){if(r.game&&!r.game.finished&&r.ids.length===2){const phase=r.game.phase,inputs=r.inputs.map((input,i)=>({...input,swing:input.swing||r.pendingSwing[i]}));r.pendingSwing=[false,false];engine.step(r.game,inputs);const important=r.game.finished||phase!==r.game.phase;if(important)io.to(c).compress(false).emit('state',r.game);else io.to(c).volatile.compress(false).emit('state',r.game)}}tickAccumulator-=tickDuration;steps++}if(steps===5)tickAccumulator=Math.min(tickAccumulator,tickDuration)},8);
+const PORT=process.env.PORT||3000;
+// Bind on every interface so other devices on the same LAN can connect.
+server.listen(PORT,'0.0.0.0',()=>console.log(`Mini Pickleball running on http://localhost:${PORT}`));

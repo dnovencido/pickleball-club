@@ -1,0 +1,7 @@
+{
+  "name": "mini-pickleball", "version": "1.0.0", "private": true,
+  "description": "A little pickleball, wherever you are.",
+  "scripts": {"start": "node server.js", "build": "echo build complete", "test": "node --test"},
+  "engines": {"node": ">=20"},
+  "dependencies": {"express": "^4.21.2", "socket.io": "^4.8.1"}
+}
