@@ -63,3 +63,8 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
  .touch-player .shot-buttons .touch-hit{height:56px;font-size:14px}
  .touch-player .dpad{flex-wrap:wrap;width:102px;gap:4px}
 }
+@media (pointer:coarse) and (max-width:700px){
+ .touch-controls:not(.hidden){width:100vw;margin-left:calc(50% - 50vw);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+ .touch-player{padding-left:0;padding-right:0}
+ .shot-buttons{margin-left:auto}
+}
