@@ -123,26 +123,78 @@
         p.frozen, p.giant, p.cooldown, p.curve, p.freezeShot]),
       [round(b.x), round(b.y), round(b.z), round(b.vx), round(b.vy), b.trail,
         +b.serve, b.lastHit, b.bounces, impact && [round(impact.x), round(impact.y),
-          round(impact.z), impact.life, impact.maxLife, impact.kind, impact.color]],
+          round(impact.z), impact.life, impact.maxLife, impact.kind, impact.color], round(b.vz)],
       s.orb && [round(s.orb.x), round(s.orb.y), s.orb.type], events];
   }
 
   function unpackState(packet, initial) {
     const [tick, phase, message, score, server, serveSide, rallyHits, rows, ball, orb, events, ack] = packet;
-    const [x,y,z,vx,vy,trail,serve,lastHit,bounces,impact] = ball;
+    const [x,y,z,vx,vy,trail,serve,lastHit,bounces,impact,vz = 0] = ball;
     return {...initial, tick, phase, message, score, server, serveSide, rallyHits,
       finished: phase === 'finished', ack, events,
       players: rows.map(([x,y,stamina,swing,speed,frozen,giant,cooldown,curve,freezeShot], i) =>
         ({...initial.players[i], x,y,stamina,swing,speed,frozen,giant,cooldown,curve,freezeShot})),
-      ball: {x,y,z,vx,vy,trail,serve: !!serve,lastHit,bounces,
+      ball: {x,y,z,vx,vy,vz,trail,serve: !!serve,lastHit,bounces,
         impact: impact && {x:impact[0], y:impact[1], z:impact[2], life:impact[3],
           maxLife:impact[4], kind:impact[5], color:impact[6]}},
       orb: orb && {x:orb[0], y:orb[1], type:orb[2]}};
   }
 
-  function blendBall(from, to, t, appearance = from) {
-    return {...appearance, x:from.x + (to.x - from.x) * t,
-      y:from.y + (to.y - from.y) * t, z:from.z + (to.z - from.z) * t};
+  class MatchBall {
+    constructor(state, side, now) {
+      this.state = state;
+      this.side = side;
+      this.receivedAt = now;
+      this.duration = stepMs;
+      this.previous = null;
+      this.serve = null;
+    }
+
+    receive(state, now) {
+      const samePhase = this.state.phase === state.phase;
+      this.previous = samePhase ? this.serverBall(now) : null;
+      this.duration = samePhase ? Math.max(8, Math.min(50, now - this.receivedAt)) : stepMs;
+      if (this.serve && state.phase === 'rally' && (state.ball.bounces || state.ball.lastHit !== this.side)) {
+        this.previous = this.serve.sim.ball;
+        this.duration = stepMs;
+        this.serve = null;
+      }
+      if (state.phase !== 'rally' && state.phase !== 'serve') this.serve = null;
+      if (state.phase === 'serve' && this.serve && state.ack >= this.serve.seq) this.serve = null;
+      this.state = state;
+      this.receivedAt = now;
+    }
+
+    step(input, position, seq, now) {
+      const state = this.state, side = this.side;
+      if (!this.serve && state.phase === 'serve' && state.server === side && input.swing) {
+        const sim = {...state, players:state.players.map(p => ({...p})), score:[...state.score],
+          ball:{...state.ball, x:position.x, y:position.y + (side ? 23 : -23)}};
+        sim.players[side].x = position.x;
+        sim.players[side].y = position.y;
+        const shot = {...input, forward:side ? input.down : input.up, back:side ? input.up : input.down};
+        if (engine.hit(sim, side, shot)) this.serve = {sim, started:now, seq};
+      }
+      if (!this.serve) return;
+      if (now - this.serve.started > 1500 || this.serve.sim.phase !== 'rally') this.serve = null;
+      else engine.step(this.serve.sim, [{}, {}]);
+    }
+
+    serverBall(now) {
+      const ball = this.state.ball, from = this.previous;
+      if (!from || (this.state.phase !== 'rally' && this.state.phase !== 'serve')) return ball;
+      const age = Math.max(0, now - this.receivedAt);
+      const t = Math.min(1, age / this.duration);
+      const extra = this.state.phase === 'rally' ? Math.min(2, Math.max(0, (age - this.duration) / stepMs)) : 0;
+      return {...ball,
+        x:from.x + (ball.x - from.x)*t + ball.vx*extra,
+        y:from.y + (ball.y - from.y)*t + ball.vy*extra,
+        z:Math.max(0, from.z + (ball.z - from.z)*t + ball.vz*extra - 0.11*extra*extra)};
+    }
+
+    sample(now) {
+      return this.serve?.sim.phase === 'rally' ? this.serve.sim.ball : this.serverBall(now);
+    }
   }
 
   class SnapshotBuffer {
@@ -154,8 +206,7 @@
       if (last && state.tick <= last.tick) return false;
       const offset = now - state.tick * stepMs;
       const launching = last?.phase === 'serve' && state.phase === 'rally';
-      const scoring = last?.phase === 'rally' && (state.phase === 'point' || state.finished);
-      if (!last || (last.phase !== state.phase && !launching && !scoring)) {
+      if (!last || (last.phase !== state.phase && !launching)) {
         this.frames = [];
         this.origin = offset;
         this.cursor = state.tick;
@@ -186,25 +237,10 @@
       if (!b) return a;
       const t = Math.max(0, (this.cursor - a.tick) / (b.tick - a.tick));
       const blend = (from, to) => from + (to - from) * t;
-      let ball;
-      if (a.phase === 'serve' && b.phase === 'rally') {
-        const impact = b.rallyHits === 1 && b.ball.impact;
-        // Impact life counts elapsed physics ticks since contact. Split this
-        // interval there so a moving player and the airborne ball take distinct paths.
-        const releaseTick = impact ? Math.max(a.tick, b.tick - (impact.maxLife - impact.life)) : a.tick;
-        const release = impact || a.ball;
-        if (this.cursor < releaseTick) {
-          ball = blendBall(a.ball, release, (this.cursor - a.tick) / (releaseTick - a.tick));
-        } else {
-          ball = blendBall(release, b.ball, (this.cursor - releaseTick) / (b.tick - releaseTick), b.ball);
-        }
-      } else {
-        ball = blendBall(a.ball, b.ball, t);
-      }
-      return {...a, ball, players: a.players.map((p,i) => ({...p,
+      return {...last, players: a.players.map((p,i) => ({...p,
         x:blend(p.x,b.players[i].x), y:blend(p.y,b.players[i].y)}))};
     }
   }
 
-  return {stepMs, packetMs, InputQueue, Prediction, SnapshotBuffer, packState, unpackState};
+  return {stepMs, packetMs, InputQueue, Prediction, MatchBall, SnapshotBuffer, packState, unpackState};
 });

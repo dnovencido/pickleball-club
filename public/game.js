@@ -17,7 +17,7 @@ lobby.querySelector('.lobby-close').onclick=leaveLobby;lobby.querySelector('.lob
 lobby.querySelector('.lobby-ready').onclick=()=>{if(!socket?.connected||!lobbyState)return;socket.emit('setReady',!lobbyState.players[lobbyState.index]?.ready)};
 lobby.querySelector('.lobby-start').onclick=()=>{if(socket?.connected&&lobbyState?.isHost)socket.emit('startRoom')};
 lobby.querySelector('#lobbyChatForm').onsubmit=e=>{e.preventDefault();const input=lobby.querySelector('#lobbyChatInput'),text=input.value.trim();if(!text||!socket?.connected||!lobbyState||lobbyState.players.length!==2)return;socket.emit('lobbyChat',{text});input.value=''};
-function setupLobby(s){s.on('lobbyUpdate',data=>{lobbyState=data;onlineIndex=data.index;lobby.querySelector('.lobby-code strong').textContent=data.code;const list=lobby.querySelector('.lobby-players');list.replaceChildren();for(let i=0;i<2;i++){const item=document.createElement('div');item.className='lobby-player';const entry=data.players[i],name=document.createElement('strong'),status=document.createElement('span');name.textContent=entry?(entry.profile.name+(entry.isHost?' · Host':'')+(i===data.index?' (you)':'')):'Waiting for opponent…';status.textContent=entry?(entry.ready?'READY':'NOT READY'):'OPEN SPOT';status.className=entry?.ready?'ready':'';item.append(name,status);list.append(item)}renderLobbyMessages(data.messages);setChatAvailability(data.players.length===2);const ready=!!data.players[data.index]?.ready,opponent=data.players.find((_,i)=>i!==data.index),canStart=data.isHost&&data.players.length===2&&!!opponent?.ready,readyButton=lobby.querySelector('.lobby-ready'),startButton=lobby.querySelector('.lobby-start');readyButton.classList.toggle('hidden',data.isHost);readyButton.innerHTML=ready?'Cancel ready <i class="fa-solid fa-xmark" aria-hidden="true"></i>':'I’m ready <i class="fa-solid fa-check" aria-hidden="true"></i>';readyButton.setAttribute('aria-pressed',String(ready));startButton.classList.toggle('hidden',!data.isHost);startButton.disabled=!canStart;lobby.querySelector('.lobby-status').textContent=data.players.length<2?'Waiting for an opponent to join.':data.isHost?(canStart?'Your opponent is ready. Start the game when you are ready.':'Waiting for your opponent to ready up.'):(ready?'You are ready. Waiting for the host to start.':'Click “I’m ready” when you are ready.');lobby.classList.remove('hidden')});s.on('lobbyChat',message=>{if(!lobbyState)return;const messages=lobbyState.messages||[];if(!messages.some(item=>item.id===message.id))messages.push(message);lobbyState.messages=messages.slice(-50);renderLobbyMessages(lobbyState.messages)});s.on('matchStart',()=>{closeLobby();resetRematch()});s.on('rematchUpdate',data=>{rematchRequested=data.you;results.querySelector('.results-rematch').innerHTML=data.you?'Cancel rematch <i class="fa-solid fa-xmark" aria-hidden="true"></i>':'Rematch <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>';results.querySelector('.rematch-status').textContent=data.you?'Waiting for your opponent to accept.':data.opponent?'Your opponent wants a rematch.':'Both players can choose a rematch.'});s.on('returnedToLobby',()=>{resetRematch();onlineState=null;localServe=null;document.body.classList.remove('game-active');canvas.classList.remove('playing');clearTouches();results.classList.add('hidden');});s.on('disconnect',()=>{if(lobbyState){closeLobby();$('#onlineStatus').textContent='Connection lost. Please rejoin the room.'}})}
+function setupLobby(s){s.on('lobbyUpdate',data=>{lobbyState=data;onlineIndex=data.index;lobby.querySelector('.lobby-code strong').textContent=data.code;const list=lobby.querySelector('.lobby-players');list.replaceChildren();for(let i=0;i<2;i++){const item=document.createElement('div');item.className='lobby-player';const entry=data.players[i],name=document.createElement('strong'),status=document.createElement('span');name.textContent=entry?(entry.profile.name+(entry.isHost?' · Host':'')+(i===data.index?' (you)':'')):'Waiting for opponent…';status.textContent=entry?(entry.ready?'READY':'NOT READY'):'OPEN SPOT';status.className=entry?.ready?'ready':'';item.append(name,status);list.append(item)}renderLobbyMessages(data.messages);setChatAvailability(data.players.length===2);const ready=!!data.players[data.index]?.ready,opponent=data.players.find((_,i)=>i!==data.index),canStart=data.isHost&&data.players.length===2&&!!opponent?.ready,readyButton=lobby.querySelector('.lobby-ready'),startButton=lobby.querySelector('.lobby-start');readyButton.classList.toggle('hidden',data.isHost);readyButton.innerHTML=ready?'Cancel ready <i class="fa-solid fa-xmark" aria-hidden="true"></i>':'I’m ready <i class="fa-solid fa-check" aria-hidden="true"></i>';readyButton.setAttribute('aria-pressed',String(ready));startButton.classList.toggle('hidden',!data.isHost);startButton.disabled=!canStart;lobby.querySelector('.lobby-status').textContent=data.players.length<2?'Waiting for an opponent to join.':data.isHost?(canStart?'Your opponent is ready. Start the game when you are ready.':'Waiting for your opponent to ready up.'):(ready?'You are ready. Waiting for the host to start.':'Click “I’m ready” when you are ready.');lobby.classList.remove('hidden')});s.on('lobbyChat',message=>{if(!lobbyState)return;const messages=lobbyState.messages||[];if(!messages.some(item=>item.id===message.id))messages.push(message);lobbyState.messages=messages.slice(-50);renderLobbyMessages(lobbyState.messages)});s.on('matchStart',()=>{closeLobby();resetRematch()});s.on('rematchUpdate',data=>{rematchRequested=data.you;results.querySelector('.results-rematch').innerHTML=data.you?'Cancel rematch <i class="fa-solid fa-xmark" aria-hidden="true"></i>':'Rematch <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>';results.querySelector('.rematch-status').textContent=data.you?'Waiting for your opponent to accept.':data.opponent?'Your opponent wants a rematch.':'Both players can choose a rematch.'});s.on('returnedToLobby',()=>{resetRematch();onlineState=null;matchBall=null;document.body.classList.remove('game-active');canvas.classList.remove('playing');clearTouches();results.classList.add('hidden');});s.on('disconnect',()=>{if(lobbyState){closeLobby();$('#onlineStatus').textContent='Connection lost. Please rejoin the room.'}})}
 const AVATAR_POS=Object.fromEntries(Array.from({length:12},(_,i)=>['player-'+String(i+1).padStart(2,'0'),[i%4,Math.floor(i/4)]])),avatarSheet=new Image(),playerSheet=new Image(),playerBackSheet=new Image();avatarSheet.src='assets/player-roster-lowpoly.png';playerSheet.src='assets/player-sprites-no-racket.png';playerBackSheet.src='assets/player-sprites-back.webp';
 let saved={};try{saved=JSON.parse(localStorage.getItem('miniPickleProfile')||'{}')}catch{}let profile={name:'PLAYER 1',badge:'player-01',color:'#d4fa62',skin:'Classic Wood',theme:'Tournament Blue/Green',...saved};if(!AVATAR_POS[profile.badge])profile.badge='player-01';avatarSheet.onload=()=>draw();playerSheet.onload=()=>draw();playerBackSheet.onload=()=>draw();const touches=new Map(),touchSwings=[null,null];let mode='solo',activeMode='solo',score=7,game=null,keys={},keyHeldAt={},socket=null,onlineIndex=0,onlineState=null,tournament=null,lastEvent='',muted=false,audio=null,shake=0,frame=0;
 const names=['PICKLE PETE','DINK MASTER','RALLY RAE','SPIN DOCTOR','ACE ANDY','KITCHEN KIM','LOBBY LOU'];
@@ -111,14 +111,14 @@ function drawImpact(impact){if(!impact)return;const t=impact.life/impact.maxLife
 function drawHud(s){s.players.forEach((p,i)=>{let y=i?15:746;rounded(15,y,175,39,5,'#132a22dd');drawAvatarAt(p.badge,34,y+15,18,p.color);ctx.textAlign='left';ctx.fillStyle=p.color;ctx.font='bold 11px DM Sans';ctx.fillText(p.name.slice(0,14),49,y+15);ctx.fillStyle='#61776a';ctx.fillRect(25,y+23,118,4);ctx.fillStyle=p.color;ctx.fillRect(25,y+23,118*p.stamina/100,4);ctx.textAlign='right';ctx.fillStyle='#fff';ctx.font='bold 22px Space Grotesk';ctx.fillText(s.score[i],178,y+27)});ctx.textAlign='center';ctx.fillStyle='#e9f3deaa';ctx.font='bold 9px DM Sans';ctx.fillText('FIRST TO '+s.winningScore+'  ·  WIN BY 2',300,28)}
 let displayedResult=null;
 function updateResults(s){const local=!!(game&&s===game&&s.finished&&!tournament&&(activeMode==='solo'||activeMode==='local')),online=!!(onlineState&&s?.finished),show=local||online;if(show&&displayedResult!==s){results.classList.remove('hidden');results.querySelector('h2').textContent=s.message;results.querySelector('p').textContent=s.players[0].name+' '+s.score[0]+' — '+s.score[1]+' '+s.players[1].name;results.querySelector('.results-rematch').classList.remove('hidden');results.querySelector('.results-lobby').classList.toggle('hidden',!online);displayedResult=s}else if(!show&&displayedResult){results.classList.add('hidden');displayedResult=null}}
-let initialState, snapshots, prediction, localServe;
+let initialState, snapshots, prediction, matchBall;
 
 function startOnline(state) {
   onlineState = initialState = state;
   snapshots = new PickleNet.SnapshotBuffer();
   snapshots.push(state, performance.now());
   prediction = new PickleNet.Prediction(state.players[onlineIndex], onlineIndex);
-  localServe = null;
+  matchBall = new PickleNet.MatchBall(state, onlineIndex, performance.now());
 }
 
 function receiveOnlineState(packet) {
@@ -129,7 +129,7 @@ function receiveOnlineState(packet) {
   const reset = state.phase === 'point' || state.finished ||
     (state.phase === 'serve' && onlineState.phase !== 'serve');
   prediction.reconcile(state.players[onlineIndex], state.ack, reset);
-  if (reset || (localServe && state.phase === 'serve' && state.ack >= localServe.seq)) localServe = null;
+  matchBall.receive(state, now);
   onlineState = state;
   state.events.forEach(sound);
 }
@@ -141,11 +141,7 @@ function sendOnlineInput(now) {
   const packet = prediction.step(input, now);
   if (packet) socket.emit('input', packet);
 
-  if (onlineState.phase === 'serve' && onlineState.server === onlineIndex &&
-      input.swing && !localServe && onlineState.players[onlineIndex].cooldown <= 1) {
-    const {x, y} = prediction.position();
-    localServe = {x, y:y + (onlineIndex ? 23 : -23), started:now, seq:prediction.seq};
-  }
+  matchBall.step(input, prediction.player, prediction.seq, now);
 }
 
 function onlineView(s, now) {
@@ -153,15 +149,12 @@ function onlineView(s, now) {
   const players = s.players.slice();
   const player = {...players[onlineIndex], ...prediction.position()};
   players[onlineIndex] = player;
-  let ball = s.ball;
-  if (ball.serve && s.server === onlineIndex) {
-    // Keep the held ball at the release position if the player moves after swinging.
-    ball = {...ball, x:localServe?.x ?? player.x, y:localServe?.y ?? (player.y + (onlineIndex ? 23 : -23))};
-  }
-  if (localServe) {
-    // Respond to the button immediately and avoid replaying the same paddle swing.
-    if (s.rallyHits > 1 || (s.phase === 'rally' && !player.swing)) localServe = null;
-    else player.swing = Math.max(0, 12 - (now - localServe.started) / PickleNet.stepMs);
+  let ball = matchBall.sample(now);
+  if (matchBall.serve?.sim.phase === 'rally') {
+    player.swing = matchBall.serve.sim.players[onlineIndex].swing;
+  } else if (ball.serve) {
+    const server = players[s.server];
+    ball = {...ball, x:server.x, y:server.y + (s.server ? 23 : -23)};
   }
   return {...s, players, ball};
 }
