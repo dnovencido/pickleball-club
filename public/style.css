@@ -81,3 +81,10 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
  .touch-player .shot-buttons button.pressed,.touch-player .shot-buttons button:active{transform:translateY(3px) scale(.96);filter:brightness(1.12);box-shadow:0 0 0 #0f2215}
  .touch-player .dpad button.pressed,.touch-player .dpad button:active{transform:translateY(2px);filter:brightness(1.15)}
 }
+@media (pointer:coarse){
+ .control-button{display:block;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+ .touch-player .dpad .control-button{width:48px;height:48px}
+ .touch-player .shot-buttons .control-button{position:absolute;width:48px;height:48px;border-radius:50%;padding:0}
+ .touch-player .shot-buttons .touch-hit{right:0;bottom:0;width:96px;height:96px}
+ .touch-player .shot-buttons .control-button.pressed{transform:translateY(3px) scale(.96)}
+}
