@@ -140,37 +140,9 @@
       orb: orb && {x:orb[0], y:orb[1], type:orb[2]}};
   }
 
-  class ServePreview {
-    constructor(sim, started, seq) {
-      this.started = started;
-      this.seq = seq;
-      this.side = sim.server;
-      this.frames = [];
-      // Only predict the launch. The server owns contacts, bounces and points.
-      for (let tick = 0; tick <= 12; tick++) {
-        if (tick) engine.step(sim, [{}, {}]);
-        if (sim.phase !== 'rally' || sim.ball.bounces) break;
-        this.frames.push({...sim.ball, impact:sim.ball.impact && {...sim.ball.impact}});
-      }
-    }
-
-    sample(state, now) {
-      const elapsed = Math.max(0, (now - this.started) / stepMs);
-      const last = this.frames.length - 1;
-      // Start at game speed, then ease toward the end of the preview while
-      // waiting for the buffered flight. A late packet cannot restart the shot.
-      const tick = last ? last * -Math.expm1(-elapsed / last) : 0;
-      const a = this.frames[Math.floor(tick)], b = this.frames[Math.ceil(tick)];
-      const t = tick - Math.floor(tick);
-      const ball = {...a, x:a.x + (b.x-a.x)*t, y:a.y + (b.y-a.y)*t, z:a.z + (b.z-a.z)*t};
-      if (state.phase === 'rally') {
-        const forward = (state.ball.y - ball.y) * (this.side ? 1 : -1);
-        // Check both the shadow and the elevated ball in the server player's view.
-        if ((forward >= 0 && forward + state.ball.z - ball.z >= 0) ||
-            state.ball.bounces || state.ball.lastHit !== this.side) return null;
-      }
-      return {ball, swing:Math.max(0, 12-elapsed)};
-    }
+  function blendBall(from, to, t, appearance = from) {
+    return {...appearance, x:from.x + (to.x - from.x) * t,
+      y:from.y + (to.y - from.y) * t, z:from.z + (to.z - from.z) * t};
   }
 
   class SnapshotBuffer {
@@ -182,10 +154,12 @@
       if (last && state.tick <= last.tick) return false;
       const offset = now - state.tick * stepMs;
       const launching = last?.phase === 'serve' && state.phase === 'rally';
-      if (!last || (last.phase !== state.phase && !launching)) {
+      const scoring = last?.phase === 'rally' && (state.phase === 'point' || state.finished);
+      if (!last || (last.phase !== state.phase && !launching && !scoring)) {
         this.frames = [];
         this.origin = offset;
         this.cursor = state.tick;
+        this.sampledAt = undefined;
       } else {
         // Follow the server tick clock. A single late packet must not rewind it.
         this.origin = Math.min(offset, this.origin + (offset - this.origin) * 0.02);
@@ -197,19 +171,40 @@
 
     sample(now) {
       const frames = this.frames, last = frames.at(-1);
-      if (frames.length < 2 || last.finished || last.phase === 'point') return last;
-      this.cursor = Math.min(last.tick, Math.max(this.cursor, (now - this.origin - delayMs) / stepMs));
+      if (!last) return;
+      const elapsed = now - (this.sampledAt ?? now);
+      const target = (now - this.origin - delayMs) / stepMs;
+      // After a packet gap, recover at up to 5% above game speed. Skipping
+      // directly to the target makes one frame cover the whole missed distance.
+      const limit = this.sampledAt === undefined ? target : this.cursor + Math.max(0, elapsed) * 1.05 / stepMs;
+      this.sampledAt = now;
+      const next = Math.max(frames[0].tick, this.cursor, Math.min(target, limit));
+      this.cursor = Math.min(last.tick, next);
+      if (frames.length < 2) return last;
       while (frames.length > 1 && frames[1].tick <= this.cursor) frames.shift();
       const [a,b] = frames;
       if (!b) return a;
       const t = Math.max(0, (this.cursor - a.tick) / (b.tick - a.tick));
       const blend = (from, to) => from + (to - from) * t;
-      return {...a, players: a.players.map((p,i) => ({...p,
-        x:blend(p.x,b.players[i].x), y:blend(p.y,b.players[i].y)})),
-        ball: {...a.ball, x:blend(a.ball.x,b.ball.x), y:blend(a.ball.y,b.ball.y),
-          z:blend(a.ball.z,b.ball.z)}};
+      let ball;
+      if (a.phase === 'serve' && b.phase === 'rally') {
+        const impact = b.rallyHits === 1 && b.ball.impact;
+        // Impact life counts elapsed physics ticks since contact. Split this
+        // interval there so a moving player and the airborne ball take distinct paths.
+        const releaseTick = impact ? Math.max(a.tick, b.tick - (impact.maxLife - impact.life)) : a.tick;
+        const release = impact || a.ball;
+        if (this.cursor < releaseTick) {
+          ball = blendBall(a.ball, release, (this.cursor - a.tick) / (releaseTick - a.tick));
+        } else {
+          ball = blendBall(release, b.ball, (this.cursor - releaseTick) / (b.tick - releaseTick), b.ball);
+        }
+      } else {
+        ball = blendBall(a.ball, b.ball, t);
+      }
+      return {...a, ball, players: a.players.map((p,i) => ({...p,
+        x:blend(p.x,b.players[i].x), y:blend(p.y,b.players[i].y)}))};
     }
   }
 
-  return {stepMs, packetMs, InputQueue, Prediction, ServePreview, SnapshotBuffer, packState, unpackState};
+  return {stepMs, packetMs, InputQueue, Prediction, SnapshotBuffer, packState, unpackState};
 });

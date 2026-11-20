@@ -108,47 +108,65 @@ test('a serve enters the buffered ball path without pausing the playback clock',
 });
 
 for (const side of [0, 1]) {
-  test(`player ${side + 1}'s moving serve stays forward through a delayed handoff`, () => {
+  test(`player ${side + 1}'s moving serve follows the server arc at game speed`, () => {
     const game = engine.create();
-    game.server = game.ball.lastHit = game.ball.side = side;
-    const input = {swing:true, right:true, slow:true};
-    const player = game.players[side];
-    game.ball.x = player.x;
-    game.ball.y = player.y + (side ? 23 : -23);
-    const held = structuredClone(game);
-    const sim = structuredClone(game);
-    engine.movePlayer(sim.players[side], side, input);
-    sim.ball.x = sim.players[side].x;
-    assert.ok(engine.hit(sim, side, input));
-    let preview = new net.ServePreview(sim, 0, 1);
-    const buffer = new net.SnapshotBuffer();
-    buffer.push(held, 0);
-    const direction = side ? 1 : -1;
-    let launched = false, handedOff = false;
-    let rendered = held.ball;
-    const packets = [];
-    for (let tick = 1; tick <= 35; tick++) {
-      const now = tick * net.stepMs;
+    game.server = game.ball.side = game.ball.lastHit = side;
+    game.ball.x = game.players[side].x;
+    game.ball.y = game.players[side].y + (side ? 23 : -23);
+    const history = [structuredClone(game)];
+    for (let tick = 1; tick <= 50; tick++) {
       const inputs = [{}, {}];
-      if (tick === 5) inputs[side] = input;
+      inputs[side] = tick <= 7 ? {right:true, swing:tick === 7} : {left:true};
       engine.step(game, inputs);
-      // 4 ticks each way (~133 ms round trip), with a gap in the first rally packets.
-      if (tick % 2 === 0 && tick !== 8 && tick !== 10) packets.push(structuredClone(game));
-      while (packets.length && packets[0].tick + 4 <= tick) buffer.push(packets.shift(), now);
-      const buffered = buffer.sample(now);
-      const sample = preview?.sample(buffered, now);
-      if (!sample) {
-        preview = null;
-        handedOff = true;
-      }
-      const ball = sample?.ball || buffered.ball;
-      const forward = direction * (ball.y - rendered.y);
-      assert.ok(forward >= -1e-8, `shadow reversed on tick ${tick}`);
-      assert.ok(forward + ball.z - rendered.z >= -1e-8, `ball reversed on tick ${tick}`);
-      if (tick === 1) launched = forward > 0;
-      rendered = ball;
+      history.push(structuredClone(game));
     }
-    assert.ok(launched);
-    assert.ok(handedOff);
+
+    const buffer = new net.SnapshotBuffer();
+    const sample = (tick, now) => {
+      const packet = JSON.parse(JSON.stringify([...net.packState(history[tick], []), 0]));
+      buffer.push(net.unpackState(packet, history[0]), now);
+    };
+    const travelMs = side ? 65 : 22;
+    const arrival = tick => tick * net.stepMs + travelMs + (tick % 4 ? 7 : 0);
+    let next = 0;
+    for (let frame = 0; frame < 84; frame++) {
+      const now = travelMs + 75 + frame * net.stepMs / 2;
+      // Omit the launch packet and vary arrival time without draining the buffer.
+      while (next < history.length && arrival(next) <= now) {
+        if (next !== 8) sample(next, arrival(next));
+        next += 2;
+      }
+      const view = buffer.sample(now);
+      const tick = buffer.cursor;
+      if (tick < 6) continue;
+      const lo = Math.floor(tick), hi = Math.ceil(tick), t = tick - lo;
+      const from = lo === 6 ? history[7].ball.impact : history[lo].ball;
+      const to = hi === 6 ? from : history[hi].ball;
+      const expected = key => from[key] + (to[key] - from[key]) * t;
+      if (tick < 7) assert.equal(view.ball.serve, false);
+      assert.ok(Math.abs(view.ball.x - expected('x')) < 0.04, `horizontal position at ${tick}`);
+      assert.ok(Math.abs(view.ball.y - expected('y')) < 0.04, `ground speed at ${tick}`);
+      assert.ok(Math.abs(view.ball.z - expected('z')) < 0.5, `ball height at ${tick}`);
+    }
   });
 }
+
+test('plays through the last airborne frames before showing the score', () => {
+  const buffer = new net.SnapshotBuffer();
+  const state = (tick,phase) => ({tick,phase,finished:phase==='finished',players:[],ball:{x:tick,y:0,z:0}});
+  buffer.push(state(10,'rally'), 10*net.stepMs);
+  buffer.push(state(12,'finished'), 12*net.stepMs);
+  assert.ok(Math.abs(buffer.sample(11*net.stepMs+75).ball.x - 11) < 1e-8);
+  assert.equal(buffer.sample(13*net.stepMs+75).phase, 'finished');
+});
+
+test('resumes from a packet gap without a burst of extra ball speed', () => {
+  const buffer = new net.SnapshotBuffer();
+  const state = tick => ({tick,phase:'rally',players:[],ball:{x:tick,y:0,z:0}});
+  buffer.push(state(0), 0);
+  buffer.push(state(2), 2*net.stepMs);
+  assert.equal(buffer.sample(200).ball.x, 2);
+  buffer.push(state(14), 14*net.stepMs);
+  const x = buffer.sample(14*net.stepMs).ball.x;
+  assert.ok(x > 3.9 && x <= 4.11);
+});
