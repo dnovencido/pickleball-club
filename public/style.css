@@ -56,11 +56,15 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
  .touch-player>span{position:absolute;top:0;left:50%;transform:translateX(-50%);font-weight:700}
  .joystick{flex:none;width:108px;height:108px;border-radius:50%;border:2px solid #a4c4a8aa;background:#304438a6;display:grid;place-items:center;touch-action:none;user-select:none}
  .joystick-knob{width:46px;height:46px;border-radius:50%;background:#c3d8bcbf;border:2px solid #e5f3df;pointer-events:none}
- .shot-buttons{display:grid;grid-template-columns:repeat(2,minmax(48px,1fr));gap:6px;align-items:center}
+ .shot-buttons{position:relative;flex:none;width:156px;height:156px;margin-left:auto}
  .touch-player .shot-buttons button,.touch-player .dpad button{min-width:48px;height:48px;font-size:10px;font-weight:700;touch-action:none}
  .touch-player .shot-buttons button,.touch-player .dpad button{background:#213d2cd9;color:#fff;border-color:#a2bda7}
  .touch-player .shot-buttons .touch-hit{background:#d4fa62d9;color:#142014}
- .touch-player .shot-buttons .touch-hit{height:56px;font-size:14px}
+ .touch-player .shot-buttons button{position:absolute;width:48px;height:48px;border-radius:50%;padding:0}
+ .touch-player .shot-buttons [data-shot="lob"]{top:0;left:16px}
+ .touch-player .shot-buttons [data-shot="dink"]{top:0;right:0}
+ .touch-player .shot-buttons [data-key="shift"],.touch-player .shot-buttons [data-key="rightshift"]{left:0;bottom:16px}
+ .touch-player .shot-buttons .touch-hit{right:0;bottom:0;width:96px;height:96px;font-size:17px}
  .touch-player .dpad{flex-wrap:wrap;width:102px;gap:4px}
 }
 @media (pointer:coarse) and (max-width:700px){
