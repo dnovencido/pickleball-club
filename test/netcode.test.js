@@ -136,7 +136,7 @@ for (const side of [0, 1]) {
   });
 }
 
-test('rally playback interpolates the last update and projects at most two physics ticks', () => {
+test('rally playback interpolates the last update and projects through only a brief packet gap', () => {
   const game = engine.create();
   engine.step(game, [{swing:true}, {}]);
   const from = structuredClone(game);
@@ -149,8 +149,13 @@ test('rally playback interpolates the last update and projects at most two physi
   assert.equal(half.x, (from.ball.x + state.ball.x)/2);
   assert.equal(half.y, (from.ball.y + state.ball.y)/2);
   const late = playback.sample(200);
-  assert.equal(late.x, state.ball.x + state.ball.vx*2);
-  assert.ok(Math.abs(late.z - (state.ball.z + game.ball.vz*2 - 0.44)) < 0.011);
+  assert.equal(late.x, state.ball.x + state.ball.vx*1.25);
+  assert.ok(Math.abs(late.z - (state.ball.z + game.ball.vz*1.25 - 0.11*1.25**2)) < 0.011);
+});
+
+test('sends compact ball states for every physics tick', () => {
+  assert.equal(net.statePacketMs, net.stepMs);
+  assert.equal(net.packetMs, 2 * net.stepMs);
 });
 
 test('resumes from a packet gap without a burst of extra opponent speed', () => {

@@ -102,7 +102,7 @@ setInterval(() => {
     rooms.forEach(stepRoom);
     accumulator -= netcode.stepMs;
   }
-  if (now - lastBroadcast >= netcode.packetMs) {
+  if (now - lastBroadcast >= netcode.statePacketMs) {
     rooms.forEach(broadcastRoom);
     lastBroadcast = now;
   }

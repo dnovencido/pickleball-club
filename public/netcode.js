@@ -4,7 +4,11 @@
 })(globalThis, function (engine) {
   'use strict';
   const stepMs = 1000 / 60;
+  // Input packets are batched at 30 Hz. Small, compact state packets travel at
+  // the 60 Hz simulation rate so the ball never has to bridge multiple physics
+  // ticks while it is in flight.
   const packetMs = 2 * stepMs;
+  const statePacketMs = stepMs;
   const delayMs = 75;
   const maxBatch = 8;
   const actions = ['up', 'down', 'left', 'right', 'swing', 'slow', 'sprint'];
@@ -185,7 +189,9 @@
       if (!from || (this.state.phase !== 'rally' && this.state.phase !== 'serve')) return ball;
       const age = Math.max(0, now - this.receivedAt);
       const t = Math.min(1, age / this.duration);
-      const extra = this.state.phase === 'rally' ? Math.min(2, Math.max(0, (age - this.duration) / stepMs)) : 0;
+      // The server sends each physics step. Project only through a brief
+      // packet gap, leaving bounces and hits to the next authoritative state.
+      const extra = this.state.phase === 'rally' ? Math.min(1.25, Math.max(0, (age - this.duration) / stepMs)) : 0;
       return {...ball,
         x:from.x + (ball.x - from.x)*t + ball.vx*extra,
         y:from.y + (ball.y - from.y)*t + ball.vy*extra,
@@ -242,5 +248,5 @@
     }
   }
 
-  return {stepMs, packetMs, InputQueue, Prediction, MatchBall, SnapshotBuffer, packState, unpackState};
+  return {stepMs, packetMs, statePacketMs, InputQueue, Prediction, MatchBall, SnapshotBuffer, packState, unpackState};
 });
