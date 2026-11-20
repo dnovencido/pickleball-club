@@ -158,7 +158,10 @@
       const samePhase = this.state.phase === state.phase;
       this.previous = samePhase ? this.serverBall(now) : null;
       this.duration = samePhase ? Math.max(8, Math.min(50, now - this.receivedAt)) : stepMs;
-      if (this.serve && state.phase === 'rally' && (state.ball.bounces || state.ball.lastHit !== this.side)) {
+      // The serving client can reproduce its own flight exactly. Keep that
+      // motion through the bounce, then hand control to the server once the
+      // opponent returns it.
+      if (this.serve && state.phase === 'rally' && state.ball.lastHit !== this.side) {
         this.previous = this.serve.sim.ball;
         this.duration = stepMs;
         this.serve = null;
@@ -243,8 +246,16 @@
       if (!b) return a;
       const t = Math.max(0, (this.cursor - a.tick) / (b.tick - a.tick));
       const blend = (from, to) => from + (to - from) * t;
-      return {...last, players: a.players.map((p,i) => ({...p,
-        x:blend(p.x,b.players[i].x), y:blend(p.y,b.players[i].y)}))};
+      return {...last,
+        ball: {...a.ball,
+          x:blend(a.ball.x, b.ball.x),
+          y:blend(a.ball.y, b.ball.y),
+          z:blend(a.ball.z, b.ball.z),
+          vx:blend(a.ball.vx, b.ball.vx),
+          vy:blend(a.ball.vy, b.ball.vy),
+          vz:blend(a.ball.vz, b.ball.vz)},
+        players: a.players.map((p,i) => ({...p,
+          x:blend(p.x,b.players[i].x), y:blend(p.y,b.players[i].y)}))};
     }
   }
 

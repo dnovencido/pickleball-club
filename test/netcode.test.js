@@ -72,9 +72,9 @@ test('samples opponent positions 75 ms behind server time through burst arrivals
   buffer.push(state(10), 10 * net.stepMs);
   assert.equal(buffer.push(state(8), 180), false);
   const sampled = buffer.sample(175);
-  assert.equal(sampled.ball.x, 10);
+  assert.equal(sampled.ball.x, 6);
   assert.equal(sampled.players[1].x, 12);
-  assert.equal(buffer.sample(500).players[1].x, 20);
+  assert.equal(buffer.sample(500).ball.x, 10);
   const reset = {...state(20), phase:'serve'};
   buffer.push(reset, 510);
   assert.equal(buffer.sample(510), reset);
@@ -130,9 +130,14 @@ for (const side of [0, 1]) {
     const before = ball.sample(now);
     const confirmed = net.unpackState([...net.packState(game, []), 1], initial);
     ball.receive(confirmed, now);
+    assert.ok(ball.serve);
+    assert.deepEqual(ball.sample(now), before);
+
+    const returned = structuredClone(confirmed);
+    returned.ball.lastHit = 1 - side;
+    ball.receive(returned, now + net.stepMs);
     assert.equal(ball.serve, null);
-    assert.equal(ball.sample(now).y, before.y);
-    assert.ok(Math.abs(ball.sample(now + net.stepMs).y - confirmed.ball.y) < 1e-8);
+    assert.equal(ball.sample(now + net.stepMs).y, before.y);
   });
 }
 
