@@ -13,6 +13,8 @@ For Dokploy, deploy this repository as a Docker app. Dokploy will use the
 `Dockerfile`, expose container port `3000`, and route your domain to that port.
 The server reads `PORT` from the environment and binds to all interfaces.
 
+For players in the Philippines, compare the in-game round-trip time from a Philippine connection when choosing between nearby hosts such as Singapore and Hong Kong. The server location is set by the machine running Dokploy. This repository does not select a region.
+
 ### Live edits during development
 
 The production image intentionally contains a fixed snapshot of the source.
