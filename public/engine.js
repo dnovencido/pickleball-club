@@ -32,6 +32,9 @@ if(b.y<TOP-130||b.y>BOTTOM+130||b.x<LEFT-150||b.x>RIGHT+150)point(s,b.bounces?b.
 // on diagonal serves where chasing the ball leaves it on the wrong side.
 function bot(s,i,difficulty='Medium'){
  const p=s.players[i],b=s.ball, action={up:false,down:false,left:false,right:false,swing:false,slow:false};
+ const advanced=difficulty==='Difficult'||difficulty==='Insane';
+ const boost=difficulty==='Insane'?1:difficulty==='Difficult'?.5:0;
+ if(boost)action.moveBoost=boost;
  if(s.phase==='serve'){
   if(s.server===i) action.swing=s.tick%35===0;
   return action;
@@ -43,7 +46,7 @@ function bot(s,i,difficulty='Medium'){
   const home=i?205:595;action.up=p.y>home+10;action.down=p.y<home-10;
   return action;
  }
- const dead={Easy:12,Medium:7,Hard:4}[difficulty]||7;
+ const dead={Easy:12,Medium:7,Hard:4,Difficult:3,Insane:2}[difficulty]||7;
  let x=b.x,y=b.y,z=b.z,vx=b.vx,vy=b.vy,vz=b.vz,spin=b.spin;
  let bounced=b.side===i&&b.bounces>0, target=null;
  // Project the first legal bounce and a few frames of its outgoing path.
@@ -59,7 +62,7 @@ function bot(s,i,difficulty='Medium'){
   if(bounced){
    target={x,y};
    const dist=Math.hypot(x-p.x,y-p.y);
-   if(dist<=3.2*t+26)break;
+   if(dist<=3.2*(1+boost*.45)*t+26)break;
   }
  }
  if(!target && bounced)target={x:b.x+b.vx*3,y:b.y+b.vy*3};
@@ -76,7 +79,7 @@ function bot(s,i,difficulty='Medium'){
  // When behind, a bot presses for an earlier winner. That extra risk prevents
  // bot-only matches from trading points forever at deuce.
  const rallyLimit=Math.max(2,baseRallyLimit-(s.score[i]<s.score[1-i]?1:0));
- if(s.rallyHits>=rallyLimit)return action;
+ if((!advanced||s.botOnly)&&s.rallyHits>=rallyLimit)return action;
  if(legalBounce&&Math.abs(b.x-p.x)<36&&Math.abs(b.y-p.y)<45&&b.z<75&&!p.cooldown){
   action.swing=true;
   // Movement keys also select shots, so stop chasing while swinging and then
@@ -84,7 +87,7 @@ function bot(s,i,difficulty='Medium'){
   action.up=false;action.down=false;action.left=false;action.right=false;
   const towardNet=i?'down':'up',awayFromNet=i?'up':'down';
   const plan=(s.tick+s.rallyHits*3+i*7+s.score[0]*2+s.score[1])%12;
-  const aimRight=(s.rallyHits+s.server+i)%2===0;
+  const aimRight=advanced?s.players[1-i].x<300:(s.rallyHits+s.server+i)%2===0;
   const canDink=Math.abs(p.y-NET)<165;
   // Dink when established at the kitchen; drive through an open side in most
   // exchanges; periodically lob to push an aggressive opponent backwards.

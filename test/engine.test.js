@@ -20,7 +20,7 @@ test('a serve travels diagonally and a missed return awards the server',()=>{con
 test('a player cannot hit the same shot twice',()=>{const s=E.create();E.step(s,[{swing:true},{}]);s.players[0].cooldown=0;const velocity=s.ball.vy;assert.equal(E.hit(s,0,{}),false);assert.equal(s.ball.vy,velocity)});
 test('an early first-return swing is buffered until the ball bounces',()=>{const s=E.create();s.phase='rally';s.rallyHits=1;const p=s.players[1];Object.assign(s.ball,{serve:false,lastHit:0,side:0,bounces:0,x:p.x,y:p.y,z:20,vx:0,vy:0,vz:-1});E.step(s,[{}, {swing:true}]);assert.deepEqual(s.score,[0,0]);assert.ok(p.queuedSwing,'early swing should be queued instead of faulted');Object.assign(s.ball,{z:1,vz:-2});E.step(s,[{},{}]);assert.equal(s.ball.bounces,1);E.step(s,[{},{}]);assert.equal(s.ball.lastHit,1);assert.equal(s.rallyHits,2)});
 test('a kitchen volley is a fault after the opening bounces',()=>{const s=E.create();s.phase='rally';s.rallyHits=3;s.ball.serve=false;s.ball.lastHit=0;s.ball.bounces=0;s.players[1].y=350;s.ball.x=s.players[1].x;s.ball.y=350;s.ball.z=10;E.hit(s,1,{});assert.equal(s.message,'KITCHEN VOLLEY FAULT')});
-for (const difficulty of ['Easy', 'Medium', 'Hard']) {
+for (const difficulty of ['Easy', 'Medium', 'Hard', 'Difficult', 'Insane']) {
   test(`${difficulty} bots can sustain a short rally after a diagonal serve`, () => {
     const s=E.create();
     let longestRally=0;
@@ -31,6 +31,19 @@ for (const difficulty of ['Easy', 'Medium', 'Hard']) {
     assert.ok(longestRally>=2,`longest rally was ${longestRally} hits`);
   });
 }
+test('advanced bots pursue long rallies and aim away from their opponent',()=>{
+ for(const difficulty of ['Difficult','Insane']){
+  const s=E.create();
+  s.phase='rally';s.rallyHits=8;
+  Object.assign(s.players[1],{x:300,y:250,cooldown:0});
+  s.players[0].x=150;
+  Object.assign(s.ball,{serve:false,lastHit:0,side:1,bounces:1,x:300,y:250,z:5,vx:0,vy:0,vz:1});
+  const action=E.bot(s,1,difficulty);
+  assert.equal(action.swing,true);
+  assert.equal(action.right,true);
+  assert.ok(action.moveBoost>0);
+ }
+});
 test('a bot selects a dink strategy near the kitchen',()=>{
  const s=E.create();
  s.phase='rally';s.rallyHits=2;s.tick=11;
