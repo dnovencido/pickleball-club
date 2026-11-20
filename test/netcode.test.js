@@ -158,6 +158,23 @@ test('rally playback interpolates the last update and projects through only a br
   assert.ok(Math.abs(late.z - (state.ball.z + game.ball.vz*1.25 - 0.11*1.25**2)) < 0.011);
 });
 
+test('holds the predicted double bounce until the server confirms the point', () => {
+  const state = engine.create();
+  const ball = new net.MatchBall(state, 0, 0);
+  ball.step({swing:true}, state.players[0], 1, 0);
+  let now = 0;
+  while (ball.serve.sim.phase === 'rally' && now < 1400) {
+    now += net.stepMs;
+    ball.step({}, state.players[0], 1, now);
+  }
+  assert.equal(ball.serve.sim.message, 'DOUBLE BOUNCE');
+  const landing = {...ball.sample(now)};
+  ball.step({}, state.players[0], 1, now + net.stepMs);
+  assert.deepEqual(ball.sample(now + net.stepMs), landing);
+  ball.receive({...state, phase:'point', ball:landing}, now + 2 * net.stepMs);
+  assert.equal(ball.serve, null);
+});
+
 test('sends compact ball states for every physics tick', () => {
   assert.equal(net.statePacketMs, net.stepMs);
   assert.equal(net.packetMs, 2 * net.stepMs);

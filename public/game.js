@@ -149,7 +149,7 @@ function onlineView(s, now) {
   const players = s.players.slice();
   const player = {...players[onlineIndex], ...prediction.position()};
   players[onlineIndex] = player;
-  const predictingServe = matchBall.serve?.sim.phase === 'rally';
+  const predictingServe = !!matchBall.serve;
   let ball = predictingServe ? matchBall.sample(now) : s.ball;
   if (predictingServe) {
     player.swing = matchBall.serve.sim.players[onlineIndex].swing;

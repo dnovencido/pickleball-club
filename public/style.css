@@ -52,12 +52,14 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
 @media (pointer:coarse){
  .game-active .mobile-control-picker{display:flex;align-items:center;justify-content:space-between;color:#aab9ab;font-size:11px;margin:12px 0}
  .touch-controls:not(.hidden){display:grid;gap:16px}
- .touch-player{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:8px;padding:10px;background:#19281e;border:1px solid #405747;border-radius:8px}
- .touch-player>span{align-self:flex-start;font-weight:700}
- .joystick{flex:none;width:108px;height:108px;border-radius:50%;border:2px solid #69846b;background:#304438;display:grid;place-items:center;touch-action:none;user-select:none}
- .joystick-knob{width:46px;height:46px;border-radius:50%;background:#a5bd9b;border:2px solid #d8e6cf;pointer-events:none}
+ .touch-player{position:relative;display:flex;flex-wrap:nowrap;justify-content:space-between;gap:8px;padding:6px;background:transparent;border:0}
+ .touch-player>span{position:absolute;top:0;left:50%;transform:translateX(-50%);font-weight:700}
+ .joystick{flex:none;width:108px;height:108px;border-radius:50%;border:2px solid #a4c4a8aa;background:#304438a6;display:grid;place-items:center;touch-action:none;user-select:none}
+ .joystick-knob{width:46px;height:46px;border-radius:50%;background:#c3d8bcbf;border:2px solid #e5f3df;pointer-events:none}
  .shot-buttons{display:grid;grid-template-columns:repeat(2,minmax(48px,1fr));gap:6px;align-items:center}
  .touch-player .shot-buttons button,.touch-player .dpad button{min-width:48px;height:48px;font-size:10px;font-weight:700;touch-action:none}
+ .touch-player .shot-buttons button,.touch-player .dpad button{background:#213d2cd9;color:#fff;border-color:#a2bda7}
+ .touch-player .shot-buttons .touch-hit{background:#d4fa62d9;color:#142014}
  .touch-player .shot-buttons .touch-hit{height:56px;font-size:14px}
  .touch-player .dpad{flex-wrap:wrap;width:102px;gap:4px}
 }

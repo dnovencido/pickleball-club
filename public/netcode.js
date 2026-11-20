@@ -183,8 +183,8 @@
         if (engine.hit(sim, side, shot)) this.serve = {sim, started:now, seq};
       }
       if (!this.serve) return;
-      if (now - this.serve.started > 1500 || this.serve.sim.phase !== 'rally') this.serve = null;
-      else engine.step(this.serve.sim, [{}, {}]);
+      if (now - this.serve.started > 1500) this.serve = null;
+      else if (this.serve.sim.phase === 'rally') engine.step(this.serve.sim, [{}, {}]);
     }
 
     serverBall(now) {
@@ -202,7 +202,7 @@
     }
 
     sample(now) {
-      return this.serve?.sim.phase === 'rally' ? this.serve.sim.ball : this.serverBall(now);
+      return this.serve ? this.serve.sim.ball : this.serverBall(now);
     }
   }
 
