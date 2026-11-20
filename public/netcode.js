@@ -140,6 +140,39 @@
       orb: orb && {x:orb[0], y:orb[1], type:orb[2]}};
   }
 
+  class ServePreview {
+    constructor(sim, started, seq) {
+      this.started = started;
+      this.seq = seq;
+      this.side = sim.server;
+      this.frames = [];
+      // Only predict the launch. The server owns contacts, bounces and points.
+      for (let tick = 0; tick <= 12; tick++) {
+        if (tick) engine.step(sim, [{}, {}]);
+        if (sim.phase !== 'rally' || sim.ball.bounces) break;
+        this.frames.push({...sim.ball, impact:sim.ball.impact && {...sim.ball.impact}});
+      }
+    }
+
+    sample(state, now) {
+      const elapsed = Math.max(0, (now - this.started) / stepMs);
+      const last = this.frames.length - 1;
+      // Start at game speed, then ease toward the end of the preview while
+      // waiting for the buffered flight. A late packet cannot restart the shot.
+      const tick = last ? last * -Math.expm1(-elapsed / last) : 0;
+      const a = this.frames[Math.floor(tick)], b = this.frames[Math.ceil(tick)];
+      const t = tick - Math.floor(tick);
+      const ball = {...a, x:a.x + (b.x-a.x)*t, y:a.y + (b.y-a.y)*t, z:a.z + (b.z-a.z)*t};
+      if (state.phase === 'rally') {
+        const forward = (state.ball.y - ball.y) * (this.side ? 1 : -1);
+        // Check both the shadow and the elevated ball in the server player's view.
+        if ((forward >= 0 && forward + state.ball.z - ball.z >= 0) ||
+            state.ball.bounces || state.ball.lastHit !== this.side) return null;
+      }
+      return {ball, swing:Math.max(0, 12-elapsed)};
+    }
+  }
+
   class SnapshotBuffer {
     frames = [];
     cursor = -Infinity;
@@ -178,5 +211,5 @@
     }
   }
 
-  return {stepMs, packetMs, InputQueue, Prediction, SnapshotBuffer, packState, unpackState};
+  return {stepMs, packetMs, InputQueue, Prediction, ServePreview, SnapshotBuffer, packState, unpackState};
 });

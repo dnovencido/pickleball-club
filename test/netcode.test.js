@@ -106,3 +106,49 @@ test('a serve enters the buffered ball path without pausing the playback clock',
   }
   assert.ok(Math.abs(buffer.sample(5 * net.stepMs + 75).ball.x - 1) < 1e-8);
 });
+
+for (const side of [0, 1]) {
+  test(`player ${side + 1}'s moving serve stays forward through a delayed handoff`, () => {
+    const game = engine.create();
+    game.server = game.ball.lastHit = game.ball.side = side;
+    const input = {swing:true, right:true, slow:true};
+    const player = game.players[side];
+    game.ball.x = player.x;
+    game.ball.y = player.y + (side ? 23 : -23);
+    const held = structuredClone(game);
+    const sim = structuredClone(game);
+    engine.movePlayer(sim.players[side], side, input);
+    sim.ball.x = sim.players[side].x;
+    assert.ok(engine.hit(sim, side, input));
+    let preview = new net.ServePreview(sim, 0, 1);
+    const buffer = new net.SnapshotBuffer();
+    buffer.push(held, 0);
+    const direction = side ? 1 : -1;
+    let launched = false, handedOff = false;
+    let rendered = held.ball;
+    const packets = [];
+    for (let tick = 1; tick <= 35; tick++) {
+      const now = tick * net.stepMs;
+      const inputs = [{}, {}];
+      if (tick === 5) inputs[side] = input;
+      engine.step(game, inputs);
+      // 4 ticks each way (~133 ms round trip), with a gap in the first rally packets.
+      if (tick % 2 === 0 && tick !== 8 && tick !== 10) packets.push(structuredClone(game));
+      while (packets.length && packets[0].tick + 4 <= tick) buffer.push(packets.shift(), now);
+      const buffered = buffer.sample(now);
+      const sample = preview?.sample(buffered, now);
+      if (!sample) {
+        preview = null;
+        handedOff = true;
+      }
+      const ball = sample?.ball || buffered.ball;
+      const forward = direction * (ball.y - rendered.y);
+      assert.ok(forward >= -1e-8, `shadow reversed on tick ${tick}`);
+      assert.ok(forward + ball.z - rendered.z >= -1e-8, `ball reversed on tick ${tick}`);
+      if (tick === 1) launched = forward > 0;
+      rendered = ball;
+    }
+    assert.ok(launched);
+    assert.ok(handedOff);
+  });
+}
