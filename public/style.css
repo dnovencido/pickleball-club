@@ -50,6 +50,8 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
 
 .mobile-control-picker{display:none}.touch-player .dpad{display:none}.touch-controls.use-dpad .dpad{display:flex}.touch-controls.use-dpad .joystick{display:none}
 @media (pointer:coarse){
+ .game-active .touch-controls,.game-active .touch-controls *,.game-active canvas.playing{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+ .game-active .touch-controls{touch-action:none;overscroll-behavior:contain}
  .game-active .mobile-control-picker{display:flex;align-items:center;justify-content:space-between;color:#aab9ab;font-size:11px;margin:12px 0}
  .touch-controls:not(.hidden){display:grid;gap:16px}
  .touch-player{position:relative;display:flex;flex-wrap:nowrap;justify-content:space-between;gap:8px;padding:6px;background:transparent;border:0}
@@ -67,8 +69,8 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
  .touch-player .shot-buttons .touch-hit{right:0;bottom:0;width:96px;height:96px;font-size:17px}
  .touch-player .dpad{flex-wrap:wrap;width:102px;gap:4px}
 }
-@media (pointer:coarse) and (max-width:700px){
- .touch-controls:not(.hidden){width:100vw;margin-left:calc(50% - 50vw);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
+@media (pointer:coarse){
+ .touch-controls:not(.hidden){width:auto;margin-left:calc(50% - 50vw);margin-right:calc(50% - 50vw);padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}
  .touch-player{padding-left:0;padding-right:0}
  .shot-buttons{margin-left:auto}
 }
