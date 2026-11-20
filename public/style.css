@@ -74,3 +74,10 @@ canvas.playing,.canvas-wrap,.touch-player button{touch-action:none;overscroll-be
  .touch-player{width:100%;min-width:0;padding-left:0;padding-right:0}
  .shot-buttons{margin-left:auto}
 }
+@media (pointer:coarse){
+ .joystick{display:block;touch-action:none;cursor:grab}
+ .joystick:active{cursor:grabbing}
+ .touch-player .shot-buttons button{transition:transform .08s ease,filter .08s ease,box-shadow .08s ease;box-shadow:0 3px 0 #0f2215}
+ .touch-player .shot-buttons button.pressed,.touch-player .shot-buttons button:active{transform:translateY(3px) scale(.96);filter:brightness(1.12);box-shadow:0 0 0 #0f2215}
+ .touch-player .dpad button.pressed,.touch-player .dpad button:active{transform:translateY(2px);filter:brightness(1.15)}
+}
